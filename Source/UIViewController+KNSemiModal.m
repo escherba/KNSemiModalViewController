@@ -275,9 +275,16 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 }
 
 -(void)dismissSemiModalViewWithCompletion:(void (^)(void))completion {
+    UIView *modal = nil;
+    UIView *overlay = nil;
     UIView * target = [self parentTarget];
-    UIView * modal = [target.subviews objectAtIndex:target.subviews.count-1];
-    UIView * overlay = [target.subviews objectAtIndex:target.subviews.count-2];
+    NSUInteger targetSubviewCount = target.subviews.count;
+    if (targetSubviewCount > 0u) {
+        modal = [target.subviews objectAtIndex:(targetSubviewCount - 1u)];
+    }
+    if (targetSubviewCount > 1u) {
+        overlay = [target.subviews objectAtIndex:(targetSubviewCount - 2u)];
+    }
 	NSUInteger transitionStyle = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionStyle] unsignedIntegerValue];
 	NSTimeInterval duration = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationDuration] doubleValue];
 	UIViewController *vc = objc_getAssociatedObject(self, kSemiModalViewController);
@@ -291,9 +298,9 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	
     [UIView animateWithDuration:duration animations:^{
         if (transitionStyle == KNSemiModalTransitionStyleSlideUp) {
-            modal.frame = CGRectMake(0, target.bounds.size.height, modal.frame.size.width, modal.frame.size.height);
+            [modal setFrame:CGRectMake(0.0f, target.bounds.size.height, modal.frame.size.width, modal.frame.size.height)];
         } else if (transitionStyle == KNSemiModalTransitionStyleFadeOut || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
-            modal.alpha = 0.0;
+            [modal setAlpha:0.0f];
         }
     } completion:^(BOOL finished) {
         [overlay removeFromSuperview];
@@ -316,12 +323,12 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     }];
     
     // Begin overlay animation
-    UIImageView * ss = (UIImageView*)[overlay.subviews objectAtIndex:0];
+    UIImageView * ss = (UIImageView*)[[overlay subviews] objectAtIndex:0u];
 	if ([[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue]) {
-		[ss.layer addAnimation:[self animationGroupForward:NO] forKey:@"bringForwardAnimation"];
+		[[ss layer] addAnimation:[self animationGroupForward:NO] forKey:@"bringForwardAnimation"];
 	}
     [UIView animateWithDuration:duration animations:^{
-        ss.alpha = 1;
+        [ss setAlpha:1.0f];
     } completion:^(BOOL finished) {
         if(finished){
             [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidHideNotification
@@ -334,20 +341,33 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 }
 
 - (void)resizeSemiView:(CGSize)newSize {
+    UIView *modal = nil;
+    UIView *overlay = nil;
     UIView * target = [self parentTarget];
-    UIView * modal = [target.subviews objectAtIndex:target.subviews.count-1];
-    CGRect mf = modal.frame;
-    mf.size.width = newSize.width;
-    mf.size.height = newSize.height;
-    mf.origin.y = target.frame.size.height - mf.size.height;
-    UIView * overlay = [target.subviews objectAtIndex:target.subviews.count-2];
+    NSUInteger targetSubviewCount = target.subviews.count;
+    if (targetSubviewCount > 0u) {
+        modal = [target.subviews objectAtIndex:(targetSubviewCount - 1u)];
+    }
+    CGRect mf;
+    if (modal) {
+        mf = [modal frame];
+        mf.size.width = newSize.width;
+        mf.size.height = newSize.height;
+        mf.origin.y = target.frame.size.height - mf.size.height;
+    }
+    if (targetSubviewCount > 1u) {
+        overlay = [target.subviews objectAtIndex:(targetSubviewCount - 2u)];
+    }
     UIButton * button = (UIButton*)[overlay viewWithTag:kSemiModalDismissButtonTag];
-    CGRect bf = button.frame;
-    bf.size.height = overlay.frame.size.height - newSize.height;
+    CGRect bf;
+    if (button) {
+        bf = [button frame];
+        bf.size.height = [overlay frame].size.height - newSize.height;
+    }
 	NSTimeInterval duration = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationDuration] doubleValue];
 	[UIView animateWithDuration:duration animations:^{
-        modal.frame = mf;
-        button.frame = bf;
+        if (modal) { modal.frame = mf; }
+        if (button) { button.frame = bf; }
     } completion:^(BOOL finished) {
         if(finished){
             [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalWasResizedNotification
