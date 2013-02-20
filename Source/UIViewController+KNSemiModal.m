@@ -117,15 +117,22 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	[self kn_addOrUpdateParentScreenshotInView:overlay];
 }
 
+-(UIImage*)screenshotWithView:(UIView*)target opaque:(BOOL)opaque scale:(CGFloat)scale
+{
+	UIGraphicsBeginImageContextWithOptions(target.bounds.size, opaque, scale);
+    [target.layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return image;
+}
+
 -(UIImageView*)kn_addOrUpdateParentScreenshotInView:(UIView*)screenshotContainer {
 	UIView *target = [self parentTarget];
 	UIView *semiView = [target viewWithTag:kSemiModalModalViewTag];
 	
 	screenshotContainer.hidden = YES; // screenshot without the overlay!
 	semiView.hidden = YES;
-	UIGraphicsBeginImageContextWithOptions(target.bounds.size, YES, [[UIScreen mainScreen] scale]);
-    [target.layer renderInContext:UIGraphicsGetCurrentContext()];
-    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIImage *image = [self screenshotWithView:target opaque:YES scale:[[UIScreen mainScreen] scale]];
 	screenshotContainer.hidden = NO;
 	semiView.hidden = NO;
 	
